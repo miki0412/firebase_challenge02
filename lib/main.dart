@@ -14,6 +14,9 @@ void main() async{
   runApp(const MyApp());
 }
 
+
+enum SelectedItems {dog,cat,ascending,descending}
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
 
@@ -40,13 +43,27 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
 
-  var _selectedMenu = '';
-  var _popupMenus = ['犬のみ', '猫のみ', '年齢：昇順', '年齢：降順'];
+  //var _selectedMenu = '';
+  final List<dynamic> _popupMenus = ['犬のみ', '猫のみ', '年齢：昇順', '年齢：降順'];
 
   static final FirebaseFirestore _firebaseFirestore = FirebaseFirestore.instance;
-  static final CollectionReference _collectionReference = _firebaseFirestore.collection('animals');
+  //static final CollectionReference _collectionReference = _firebaseFirestore.collection('animals');
+  Query _animals = FirebaseFirestore.instance.collection('animals');
 
-  Stream<QuerySnapshot> _animals = FirebaseFirestore.instance.collection('animals').snapshots();
+  Query Animals(SelectedItems items){
+    if(items == SelectedItems.dog){
+      return FirebaseFirestore.instance.collection('animals').where('種類', isEqualTo: '犬');
+    }else if(items == SelectedItems.cat){
+      return FirebaseFirestore.instance.collection('animals').where('種類', isEqualTo: '猫');
+    }else if(items == SelectedItems.ascending){
+      return FirebaseFirestore.instance.collection('animals').orderBy('年齢');
+    }else if(items == SelectedItems.descending){
+      return FirebaseFirestore.instance.collection('animals').orderBy('年齢', descending: true);
+    }else{
+      return FirebaseFirestore.instance.collection('animals');
+    }
+  }
+
 
 
   @override
@@ -54,36 +71,36 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          PopupMenuButton<String>(
-            icon: Icon(Icons.sort), color:Colors.white,
-            initialValue: _selectedMenu,
-            onSelected: (String menu){
-              setState(() {
-                _selectedMenu = menu;
-                if(_selectedMenu.startsWith('犬')){
-                  _animals = FirebaseFirestore.instance.collection('animals').where('品種', isEqualTo: '犬').snapshots();
-                }else if(_selectedMenu.startsWith('猫')){
-                  _animals = FirebaseFirestore.instance.collection('animals').where('品種', isEqualTo: '猫').snapshots();
-                }else if(_selectedMenu.contains('昇順')){
-                  _animals = FirebaseFirestore.instance.collection('animals').orderBy('age').snapshots();
-                }else if(_selectedMenu.contains('降順')){
-                  _animals = FirebaseFirestore.instance.collection('animals').orderBy('age', descending: true).snapshots();
-                }else{
-                  _animals = FirebaseFirestore.instance.collection('animals').snapshots();
-                }
-              });
-            },
+          PopupMenuButton<SelectedItems>(
+            icon: const Icon(Icons.sort), color:Colors.white,
+            //initialValue: _selectedMenu,
+            onSelected:  (value) => setState(() => _animals = Animals(value)),
             itemBuilder: (BuildContext context){
-              return _popupMenus.map((String menu){
-                return PopupMenuItem(child: Text(menu),value: menu,);
-              }).toList();
+              return [
+                PopupMenuItem(
+                    value: SelectedItems.dog,
+                    child: Text(_popupMenus[0])
+                ),
+                PopupMenuItem(
+                    value: SelectedItems.cat,
+                    child: Text(_popupMenus[1])
+                ),
+                PopupMenuItem(
+                    value: SelectedItems.ascending,
+                    child: Text(_popupMenus[2])
+                ),
+                PopupMenuItem(
+                    value: SelectedItems.descending,
+                    child: Text(_popupMenus[3])
+                ),
+              ];
             },
           ),
           // IconButton(onPressed: (){}, icon: Icon(Icons.sort), color:Colors.white,),
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream:  _animals,
+        stream:  _animals.snapshots(),
         builder: (context, snapshot){
           if(snapshot.hasData){
             List<DocumentSnapshot> animalsData = snapshot.data!.docs;
